@@ -85,33 +85,37 @@ public class JDebugger {
     mgr = vm.eventRequestManager();
     ExceptionRequest excReq = mgr.createExceptionRequest(null, true, true);
     excReq.setSuspendPolicy(EventRequest.SUSPEND_ALL);
+
     // for (String clob : no_breakpoint_requests) excReq.addClassExclusionFilter(clob);
     excReq.enable();
 
     MethodEntryRequest menr = mgr.createMethodEntryRequest();
     // for (String clob : no_breakpoint_requests) menr.addClassExclusionFilter(clob);
     menr.setSuspendPolicy(EventRequest.SUSPEND_EVENT_THREAD);
+    menr.addClassFilter(debugClassName);
     menr.enable();
 
     MethodExitRequest mexr = mgr.createMethodExitRequest();
     // for (String clob : no_breakpoint_requests) mexr.addClassExclusionFilter(clob);
     mexr.setSuspendPolicy(EventRequest.SUSPEND_EVENT_THREAD);
+    mexr.addClassFilter(debugClassName);
     mexr.enable();
 
     ThreadDeathRequest tdr = mgr.createThreadDeathRequest();
     tdr.setSuspendPolicy(EventRequest.SUSPEND_ALL);
+    // tdr.addClassFilter(debugClassName);
     tdr.enable();
 
     ClassPrepareRequest cpr = mgr.createClassPrepareRequest();
     // for (String clob : no_breakpoint_requests) cpr.addClassExclusionFilter(clob);
     cpr.setSuspendPolicy(EventRequest.SUSPEND_ALL);
+    cpr.addClassFilter(debugClassName);
     cpr.enable();
   }
   StepRequest request = null;
 
   private ThreadReference handleEvent(Event event) {
     System.out.println("==" + event);
-    // System.out.println(event);
     ThreadReference theThread = null;
     if (event instanceof ClassPrepareEvent) {
       classPrepareEvent((ClassPrepareEvent) event);
@@ -145,6 +149,7 @@ public class JDebugger {
       // System.out.println("13");
       request = mgr.createStepRequest(
           ((LocatableEvent) event).thread(), StepRequest.STEP_LINE, StepRequest.STEP_OVER);
+      request.addClassFilter(debugClassName);
       request.addCountFilter(1); // next step only
       request.enable();
     }
@@ -173,7 +178,8 @@ public class JDebugger {
   // throws IncompatibleThreadStateException, AbsentInformationException
   {
     try {
-      System.out.println("Thread:" + event.thread().name() + " " + event.location());
+      System.out.println("Thread:" + event.thread().name() + " " + event.location().method() + " "
+          + event.location());
       StackFrame stackFrame = event.thread().frame(0);
       if (stackFrame.location().toString().contains(debugClassName)) {
         Map<LocalVariable, Value> visibleVariables =
@@ -231,8 +237,8 @@ public class JDebugger {
     System.out.println("Debugging" + args[0]);
     JDebugger debuggerInstance = new JDebugger();
     debuggerInstance.setDebugClass(args[0]);
-    int[] breakPoints = {4, 8};
-    debuggerInstance.setBreakPointLines(breakPoints);
+    // int[] breakPoints = {4, 8};
+    // debuggerInstance.setBreakPointLines(breakPoints);
     VirtualMachine vm = null;
 
     char[] buf = new char[520];
@@ -242,30 +248,37 @@ public class JDebugger {
     try {
       vm = debuggerInstance.connectAndLaunchVM();
       reader = new InputStreamReader(vm.process().getInputStream());
-      // debuggerInstance.enableClassPrepareRequest();
-      debuggerInstance.setEventRequests();
-      // EventRequestManager mgr = debuggerInstance.mgr;
 
-      // while (reader.read(buf) != -1) {
-      // writer.write(buf);
-      // writer.flush();
-      //}
+      debuggerInstance.setEventRequests();
+
       EventSet eventSet = null;
 
       while ((eventSet = vm.eventQueue().remove()) != null) {
         for (Event event : eventSet) {
           debuggerInstance.handleEvent(event);
         }
+
         eventSet.resume();
+
+        while (reader.ready()) {
+          int l = reader.read(buf);
+          if (l > -1)
+            System.out.println("-->" + new String(buf, 0, l));
+          else
+            break;
+        }
       }
     } catch (VMDisconnectedException e) {
       System.out.println("Virtual Machine is disconnected.");
     } catch (Exception e) {
       e.printStackTrace();
     } finally {
-      while (reader.read(buf) != -1) {
-        writer.write(buf);
-        writer.flush();
+      while (reader.ready()) {
+        int l = reader.read(buf);
+        if (l > -1)
+          System.out.println("-->" + new String(buf, 0, l));
+        else
+          break;
       }
     }
   }
