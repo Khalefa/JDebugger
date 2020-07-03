@@ -91,7 +91,12 @@ public class JavaDebugger {
    */
   public void setBreakPoints(ClassPrepareEvent event) throws AbsentInformationException {
     ClassType classType = (ClassType) event.referenceType();
+    // System.out.println(breakPointLines);
+    // System.out.println(breakPointLines.length);
+
     for (int lineNumber : breakPointLines) {
+      // System.out.println(lineNumber);
+
       Location location = classType.locationsOfLine(lineNumber).get(0);
       BreakpointRequest bpReq = vm.eventRequestManager().createBreakpointRequest(location);
       bpReq.enable();
@@ -113,7 +118,7 @@ public class JavaDebugger {
           stackFrame.getValues(stackFrame.visibleVariables());
       System.out.println("Variables at " + stackFrame.location().toString() + " > ");
       for (Map.Entry<LocalVariable, Value> entry : visibleVariables.entrySet()) {
-        System.out.println(entry.getKey().name() + " = " + entry.getValue());
+        System.out.println("\t" + entry.getKey().name() + " = " + entry.getValue());
       }
     }
   }
@@ -123,37 +128,45 @@ public class JavaDebugger {
    * @param vm
    * @param event
    */
-  public void enableStepRequest(BreakpointEvent event) {
+  public void enableStepRequest(Event event) {
     // enable step request for last break point
-    if (event.location().toString().contains(
-            debugClassName + ":" + breakPointLines[breakPointLines.length - 1])) {
+    // if (event.location().toString().contains(
+    //      debugClassName + ":" + breakPointLines[breakPointLines.length - 1])) {
+    if (event instanceof ClassPrepareEvent) {
       StepRequest stepRequest = vm.eventRequestManager().createStepRequest(
-          event.thread(), StepRequest.STEP_LINE, StepRequest.STEP_OVER);
+          ((ClassPrepareEvent) (event)).thread(), StepRequest.STEP_LINE, StepRequest.STEP_OVER);
       stepRequest.enable();
     }
+    //}
   }
 
   public static void main(String[] args) throws Exception {
-    // Class klass = JavaDebugger.class;
-    // System.out.println(klass.getName());
+    // prints the local varialbe and stack info after each line
+    //
+
+    System.out.println("Debugging" + args[0]);
     JavaDebugger debuggerInstance = new JavaDebugger();
-    debuggerInstance.setDebugClass("test.JDIExampleDebuggee");
+    debuggerInstance.setDebugClass(args[0]);
     int[] breakPoints = {4, 8};
     debuggerInstance.setBreakPointLines(breakPoints);
     VirtualMachine vm = null;
 
     char[] buf = new char[520];
+    InputStreamReader reader = null;
+    OutputStreamWriter writer = new OutputStreamWriter(System.out);
 
     try {
       vm = debuggerInstance.connectAndLaunchVM();
-
+      reader = new InputStreamReader(vm.process().getInputStream());
       debuggerInstance.enableClassPrepareRequest();
 
       EventSet eventSet = null;
       while ((eventSet = vm.eventQueue().remove()) != null) {
         for (Event event : eventSet) {
+          System.out.println(event);
           if (event instanceof ClassPrepareEvent) {
             debuggerInstance.setBreakPoints((ClassPrepareEvent) event);
+            debuggerInstance.enableStepRequest(event);
           }
 
           if (event instanceof BreakpointEvent) {
@@ -165,20 +178,23 @@ public class JavaDebugger {
           if (event instanceof StepEvent) {
             debuggerInstance.displayVariables((StepEvent) event);
           }
+
           vm.resume();
         }
       }
-
+      // while (reader.read(buf) != -1) {
+      // writer.write(buf);
+      // writer.flush();
+      //}
     } catch (VMDisconnectedException e) {
       System.out.println("Virtual Machine is disconnected.");
     } catch (Exception e) {
       e.printStackTrace();
     } finally {
-      InputStreamReader reader = new InputStreamReader(vm.process().getInputStream());
-      OutputStreamWriter writer = new OutputStreamWriter(System.out);
-      reader.read(buf);
-      writer.write(buf);
-      writer.flush();
+      while (reader.read(buf) != -1) {
+        writer.write(buf);
+        writer.flush();
+      }
     }
   }
 }
