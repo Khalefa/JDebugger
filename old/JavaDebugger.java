@@ -64,7 +64,8 @@ public class JavaDebugger {
     Map<String, Connector.Argument> arguments = launchingConnector.defaultArguments();
 
     arguments.get("main").setValue(debugClassName);
-    // arguments.get("options").setValue("-cp /Users/user/Documents/GitHub/old/JDI/src/ ");
+    arguments.get("options").setValue(
+        "-cp /Users/user/Documents/GitHub/Debugger/JDebugger/examples/g ");
 
     /*for (Map.Entry<String, Connector.Argument> entry : arguments.entrySet())
       System.out.println(entry.getKey() + " " + entry.getValue());

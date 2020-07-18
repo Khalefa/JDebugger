@@ -47,7 +47,8 @@ public class JDebugger {
     Map<String, Connector.Argument> arguments = launchingConnector.defaultArguments();
 
     arguments.get("main").setValue(debugClassName);
-    // arguments.get("options").setValue("-cp /Users/user/Documents/GitHub/old/JDI/src/ ");
+    arguments.get("options").setValue(
+        "-cp /Users/user/Documents/GitHub/Debugger/JDebugger/examples/  ");
 
     /*for (Map.Entry<String, Connector.Argument> entry : arguments.entrySet())
       System.out.println(entry.getKey() + " " + entry.getValue());
@@ -148,7 +149,7 @@ public class JDebugger {
     if (event instanceof LocatableEvent) {
       // System.out.println("13");
       request = mgr.createStepRequest(
-          ((LocatableEvent) event).thread(), StepRequest.STEP_LINE, StepRequest.STEP_OVER);
+          ((LocatableEvent) event).thread(), StepRequest.STEP_MIN, StepRequest.STEP_INTO);
       request.addClassFilter(debugClassName);
       request.addCountFilter(1); // next step only
       request.enable();
@@ -180,13 +181,15 @@ public class JDebugger {
     try {
       System.out.println("Thread:" + event.thread().name() + " " + event.location().method() + " "
           + event.location());
-      StackFrame stackFrame = event.thread().frame(0);
-      if (stackFrame.location().toString().contains(debugClassName)) {
-        Map<LocalVariable, Value> visibleVariables =
-            stackFrame.getValues(stackFrame.visibleVariables());
-        System.out.println("Variables at " + stackFrame.location().toString() + " > ");
-        for (Map.Entry<LocalVariable, Value> entry : visibleVariables.entrySet()) {
-          System.out.println("\t" + entry.getKey().name() + " = " + entry.getValue());
+      List<StackFrame> stackFrames = event.thread().frames;
+      for (StackFrame stackFrame : stackFrames) {
+        if (stackFrame.location().toString().contains(debugClassName)) {
+          Map<LocalVariable, Value> visibleVariables =
+              stackFrame.getValues(stackFrame.visibleVariables());
+          System.out.println("Variables at " + stackFrame.location().toString() + " > ");
+          for (Map.Entry<LocalVariable, Value> entry : visibleVariables.entrySet()) {
+            System.out.println("\t" + entry.getKey().name() + " = " + entry.getValue());
+          }
         }
       }
     } catch (Exception e) {
