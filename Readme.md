@@ -1,4 +1,4 @@
-The last working code is JDEbugger
+The last working code is JDebugger
 
 
 
@@ -10,17 +10,19 @@ Stack variables, and specifically their values at your breakpoint, are associate
  LocalVariable localVar = stackFrame.visibleVariableByName(varName);
  Value val = stackFrame.getValue(localVar);
 
+Working with classes
+
+https://stackoverflow.com/questions/59010599/jdi-how-to-get-the-objectreference-value
+https://docs.oracle.com/en/java/javase/11/docs/api/jdk.jdi/com/sun/jdi/ObjectReference.html
 
 
-To compile:
+https://docs.oracle.com/en/java/javase/11/docs/api/jdk.jdi/com/sun/jdi/LocalVariable.html
+
  javac  -cp /Library/Java/JavaVirtualMachines/jdk1.8.0_221.jdk/Contents/Home/lib/tools.jar:. edu/suny/jdi/JDebugger.java
 
 
  javac  -g examples/JDIExampleDebuggee.java
  javac  -g examples/Debuggee.java
 
-
-
-To run":
 
 java -cp /Library/Java/JavaVirtualMachines/jdk1.8.0_221.jdk/Contents/Home/lib/tools.jar:. edu.suny.jdi.JDebugger JDIExampleDebuggee
