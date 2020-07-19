@@ -1,6 +1,14 @@
 import java.util.*;
 
 public class JDIExampleDebuggee {
+  int txt = 0;
+
+  int method(int a, int b) {
+    if (a == 0)
+      return b;
+    return method(a - 1, b + 2) + b;
+  }
+
   public static void main(String[] args) {
     LinkedList<Integer> a = new LinkedList<>();
     int[] arr = new int[10];
@@ -21,5 +29,18 @@ public class JDIExampleDebuggee {
       /*6*/ System.out.println(i + "-" + text);
       System.out.println("Line 6");
     }
+
+    {
+      // new scope
+
+      int m = 10; // not array any more
+    }
+
+    JDIExampleDebuggee n = new JDIExampleDebuggee();
+    n.txt = 1;
+
+    n.txt = 2;
+
+    int c = n.method(4, 1);
   }
 }

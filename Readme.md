@@ -12,12 +12,15 @@ Stack variables, and specifically their values at your breakpoint, are associate
 
 
 
-
+To compile:
  javac  -cp /Library/Java/JavaVirtualMachines/jdk1.8.0_221.jdk/Contents/Home/lib/tools.jar:. edu/suny/jdi/JDebugger.java
 
 
  javac  -g examples/JDIExampleDebuggee.java
  javac  -g examples/Debuggee.java
 
+
+
+To run":
 
 java -cp /Library/Java/JavaVirtualMachines/jdk1.8.0_221.jdk/Contents/Home/lib/tools.jar:. edu.suny.jdi.JDebugger JDIExampleDebuggee

@@ -8,8 +8,8 @@ import com.sun.jdi.request.*;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.util.Map;
-// here I am trying to get step event to work on each line
+import java.util.*;
+
 public class JDebugger {
   private String debugClassName;
 
@@ -87,36 +87,36 @@ public class JDebugger {
     ExceptionRequest excReq = mgr.createExceptionRequest(null, true, true);
     excReq.setSuspendPolicy(EventRequest.SUSPEND_ALL);
 
-    // for (String clob : no_breakpoint_requests) excReq.addClassExclusionFilter(clob);
     excReq.enable();
 
     MethodEntryRequest menr = mgr.createMethodEntryRequest();
-    // for (String clob : no_breakpoint_requests) menr.addClassExclusionFilter(clob);
+
     menr.setSuspendPolicy(EventRequest.SUSPEND_EVENT_THREAD);
     menr.addClassFilter(debugClassName);
     menr.enable();
 
     MethodExitRequest mexr = mgr.createMethodExitRequest();
-    // for (String clob : no_breakpoint_requests) mexr.addClassExclusionFilter(clob);
+
     mexr.setSuspendPolicy(EventRequest.SUSPEND_EVENT_THREAD);
     mexr.addClassFilter(debugClassName);
     mexr.enable();
 
     ThreadDeathRequest tdr = mgr.createThreadDeathRequest();
     tdr.setSuspendPolicy(EventRequest.SUSPEND_ALL);
-    // tdr.addClassFilter(debugClassName);
+
     tdr.enable();
 
     ClassPrepareRequest cpr = mgr.createClassPrepareRequest();
-    // for (String clob : no_breakpoint_requests) cpr.addClassExclusionFilter(clob);
+
     cpr.setSuspendPolicy(EventRequest.SUSPEND_ALL);
     cpr.addClassFilter(debugClassName);
     cpr.enable();
   }
+
   StepRequest request = null;
 
   private ThreadReference handleEvent(Event event) {
-    System.out.println("==" + event);
+    System.out.println("===>>>" + event);
     ThreadReference theThread = null;
     if (event instanceof ClassPrepareEvent) {
       classPrepareEvent((ClassPrepareEvent) event);
@@ -124,16 +124,6 @@ public class JDebugger {
       // vmDeathEvent((VMDeathEvent) event);
     } else if (event instanceof VMDisconnectEvent) {
       // vmDisconnectEvent((VMDisconnectEvent) event);
-    }
-
-    if (event instanceof LocatableEvent) {
-      // System.out.println("in handle subloop: " + steps+" "+event);
-      if (theThread == null)
-        theThread = ((LocatableEvent) event).thread();
-      else {
-        if (theThread != ((LocatableEvent) event).thread())
-          throw new RuntimeException("Assumes one thread!");
-      }
     }
 
     if (request != null && request.isEnabled()) {
@@ -155,16 +145,20 @@ public class JDebugger {
       request.enable();
     }
 
-    /*    if (event instanceof BreakpointEvent) {
-          // event.request().disable(); //<<
-          displayVariables((BreakpointEvent) event);
-          //  enableStepRequest((BreakpointEvent) event);
-        }
-    */
+    if (event instanceof MethodEntryEvent) {
+      System.out.println(((MethodEntryEvent) event).method());
+    }
+
+    if (event instanceof MethodExitEvent) {
+      System.out.println(((MethodExitEvent) event).returnValue());
+    }
+
     if (event instanceof LocatableEvent) {
       // event.request().disable();
       displayVariables((LocatableEvent) event);
     }
+
+    System.out.println("\n\n");
 
     return theThread;
   }
@@ -181,14 +175,17 @@ public class JDebugger {
     try {
       System.out.println("Thread:" + event.thread().name() + " " + event.location().method() + " "
           + event.location());
-      List<StackFrame> stackFrames = event.thread().frames;
-      for (StackFrame stackFrame : stackFrames) {
+      List<StackFrame> stackFrames = event.thread().frames();
+      for (StackFrame stackFrame : stackFrames)
+      // StackFrame stackFrame = event.thread().frame(0); // stackFrames[0];
+      {
         if (stackFrame.location().toString().contains(debugClassName)) {
           Map<LocalVariable, Value> visibleVariables =
               stackFrame.getValues(stackFrame.visibleVariables());
           System.out.println("Variables at " + stackFrame.location().toString() + " > ");
           for (Map.Entry<LocalVariable, Value> entry : visibleVariables.entrySet()) {
-            System.out.println("\t" + entry.getKey().name() + " = " + entry.getValue());
+            System.out.println("\t" + entry.getKey().name() + " = " + entry.getValue()
+                + "===" + entry.getKey().type());
           }
         }
       }
@@ -215,17 +212,11 @@ public class JDebugger {
   //}
 
   private void classPrepareEvent(ClassPrepareEvent event) {
-    // System.out.println("CPE!");
     ReferenceType rt = event.referenceType();
 
-    // jdi2json.staticListable.add(rt);
-
-    // System.out.println(rt.name());
     try {
       for (Location loc : rt.allLineLocations()) {
         System.out.println("**\t\t" + loc);
-        // BreakpointRequest br = mgr.createBreakpointRequest(loc);
-        // br.enable();
       }
     } catch (AbsentInformationException e) {
       if (!rt.name().contains("$Lambda$"))
@@ -234,14 +225,10 @@ public class JDebugger {
   }
 
   public static void main(String[] args) throws Exception {
-    // prints the local varialbe and stack info after each line
-    //
-
     System.out.println("Debugging" + args[0]);
     JDebugger debuggerInstance = new JDebugger();
     debuggerInstance.setDebugClass(args[0]);
-    // int[] breakPoints = {4, 8};
-    // debuggerInstance.setBreakPointLines(breakPoints);
+
     VirtualMachine vm = null;
 
     char[] buf = new char[520];
